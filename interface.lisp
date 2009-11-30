@@ -2,6 +2,9 @@
 
 (defparameter *gdbm* nil)
 
+(defun get-error-string ()
+  (%gdbm-strerror gdbm-errno-raw))
+
 (defun db-open (file &key (block-size 0) (flags :wrcreat) (mode '(:irusr :iwusr)) (fatal-callback nil) (on-fail :error))
   (let ((retval
          (%gdbm-open (namestring file)
@@ -29,8 +32,8 @@
 (defun store (key content &optional (flag :insert) (gdbm *gdbm*))
   (let ((retval (datum-store key content flag gdbm)))
     (ecase retval
-      (-1 (error "Not writer or invalid data, error: ~a" gdbm-errno))
-      (+1 (error "Key ~a already exists, error: ~a" key gdbm-errno))
+      (-1 (error "Not writer or invalid data, error: ~a" (get-error-string)))
+      (+1 (error "Key ~a already exists, error: ~a" key (get-error-string)))
       (0 t))))
 
 (defun exists (key &optional (gdbm *gdbm*))
@@ -42,7 +45,7 @@
 (defun db-delete (key &optional (gdbm *gdbm*))
   (let ((retval (datum-delete key gdbm)))
     (ecase retval
-      (-1 (error "Key ~a does not exist or not a writer, error ~a" key gdbm-errno))
+      (-1 (error "Key ~a does not exist or not a writer, error ~a" key (get-error-string)))
       (0 t))))
 
 (defun make-key-iterator (&optional (as :string) (gdbm *gdbm*))
@@ -65,7 +68,5 @@
 (defun reorganize (&optional (gdbm *gdbm*))
   (let ((retval (%gdbm-reorganize gdbm)))
     (cond ((zerop retval) t)
-          ((minusp retval) (error "Reorganization error: ~a" gdbm-errno)))))
+          ((minusp retval) (error "Reorganization error: ~a" (get-error-string))))))
 
-(defun get-error-string ()
-  (%gdbm-strerror gdbm-errno-raw))
