@@ -26,16 +26,17 @@
 
 (defun call-with-gdbm (gdbm function)
   (unwind-protect
-       (let ((*gdbm* gdbm))
-         (funcall function gdbm))
+       (funcall function gdbm)
     (db-close gdbm)))
 
 (defmacro with-gdbm ((file &rest options) &body body)
-  (with-unique-names (gdbm)
-    `(when-let (,gdbm (apply #'db-open ,file ,options))
+  "Execute BODY with database FILE open with options (evaluated) and bound to *GDBM*."
+  (with-unique-names (gdbm gdbm-body)
+    `(when-let (,gdbm (funcall #'db-open ,file ,@options))
        (call-with-gdbm ,gdbm
-                       #'(lambda (gdbm)
-                           ,@body)))))
+                       #'(lambda (,gdbm-body)
+                           (let ((*gdbm* ,gdbm-body))
+                             ,@body))))))
 
 (defun store (key content &optional (flag :insert) (gdbm *gdbm*))
   (let ((retval (datum-store key content flag gdbm)))
