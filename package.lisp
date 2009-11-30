@@ -15,4 +15,6 @@
            #:reorganize
            #:get-error-string
            #:vector-decoder
-           #:*u8-decoder*))
+           #:*u8-decoder*
+           #:encode-datum
+           #:decode-datum))
