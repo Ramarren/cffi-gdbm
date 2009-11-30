@@ -13,4 +13,6 @@
            #:make-key-iterator
            #:sync
            #:reorganize
-           #:get-error-string))
+           #:get-error-string
+           #:vector-decoder
+           #:*u8-decoder*))

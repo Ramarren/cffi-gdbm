@@ -10,7 +10,35 @@
          (let ((dptr (foreign-alloc :uint32 :initial-contents data :count (length data))))
            (values dptr (* 4 (length data)))))))
   (:method ((data string))
-    (encode-datum (string-to-octets data))))
+    (foreign-string-alloc data :null-terminated-p nil))
+  (:documentation "Encode DATA and return a pointer to content and content length in bytes."))
+
+(defclass vector-decoder ()
+  ((foreign-element-type :accessor foreign-element-type-of :initarg :foreign-element-type)
+   (vector-element-type  :accessor vector-element-type-of  :initarg :vector-element-type)))
+
+(defparameter *u8-decoder* (make-instance 'vector-decoder
+                                          :foreign-element-type :uint8
+                                          :vector-element-type '(unsigned-byte 8)))
+
+(defgeneric decode-datum (dptr dsize as)
+  (:method :around (dptr dsize as)
+    (unless (null-pointer-p dptr)
+      (prog1
+          (call-next-method)
+        (foreign-free dptr))))
+  (:method (dptr dsize (as (eql :string)))
+    (nth-value 0 (foreign-string-to-lisp dptr :count dsize)))
+  (:method (dptr dsize (as vector-decoder))
+    (let* ((foreign-element-type (foreign-element-type-of as))
+           (vector-element-type (vector-element-type-of as))
+           (foreign-type-size (foreign-type-size foreign-element-type)))
+      (assert (zerop (mod dsize foreign-type-size)))
+      (let ((out-vector (make-array (/ dsize foreign-type-size)
+                                    :element-type vector-element-type)))
+        (dotimes (i (/ dsize foreign-type-size) out-vector)
+          (setf (aref out-vector i) (mem-aref dptr foreign-element-type i))))))
+  (:documentation "Decode datum given by DPTR and DSIZE using decoder designator AS."))
 
 (defmacro with-datum ((data dptr dsize) &body body)
   `(multiple-value-bind (,dptr ,dsize) (encode-datum ,data)
