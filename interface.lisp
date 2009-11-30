@@ -24,11 +24,18 @@
   (when (and gdbm (not (null-pointer-p gdbm)))
     (%gdbm-close gdbm)))
 
+(defun call-with-gdbm (gdbm function)
+  (unwind-protect
+       (let ((*gdbm* gdbm))
+         (funcall function gdbm))
+    (db-close gdbm)))
+
 (defmacro with-gdbm ((file &rest options) &body body)
-  `(let ((*gdbm* (apply #'db-open ,file ,options)))
-     (unwind-protect
-          (progn ,@body)
-       (db-close *gdbm*))))
+  (with-unique-names (gdbm)
+    `(when-let (,gdbm (apply #'db-open ,file ,options))
+       (call-with-gdbm ,gdbm
+                       #'(lambda (gdbm)
+                           ,@body)))))
 
 (defun store (key content &optional (flag :insert) (gdbm *gdbm*))
   (let ((retval (datum-store key content flag gdbm)))
