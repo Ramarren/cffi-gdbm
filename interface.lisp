@@ -21,7 +21,8 @@
         retval)))
 
 (defun db-close (&optional (gdbm *gdbm*))
-  (%gdbm-close gdbm))
+  (when (and gdbm (not (null-pointer-p gdbm)))
+    (%gdbm-close gdbm)))
 
 (defmacro with-gdbm ((file &rest options) &body body)
   `(let ((*gdbm* (apply #'db-open ,file ,options)))
