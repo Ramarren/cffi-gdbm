@@ -11,15 +11,18 @@
            (values dptr (* 4 (length data)))))))
   (:method ((data string))
     (foreign-string-alloc data :null-terminated-p nil))
+  (:method ((data integer))
+    (values (foreign-alloc :int64 :initial-element data)
+            (foreign-type-size :int64)))
   (:documentation "Encode DATA and return a pointer to content and content length in bytes."))
 
 (defclass vector-decoder ()
   ((foreign-element-type :accessor foreign-element-type-of :initarg :foreign-element-type)
-   (vector-element-type  :accessor vector-element-type-of  :initarg :vector-element-type)))
+   (vector-element-type  :accessor vector-element-type-of  :initarg :vector-element-type :initform t)))
 
-(defparameter *u8-decoder* (make-instance 'vector-decoder
-                                          :foreign-element-type :uint8
-                                          :vector-element-type '(unsigned-byte 8)))
+(defparameter *u8v-decoder* (make-instance 'vector-decoder
+                                           :foreign-element-type :uint8
+                                           :vector-element-type '(unsigned-byte 8)))
 
 (defgeneric decode-datum (dptr dsize as)
   (:method :around (dptr dsize as)
@@ -29,6 +32,9 @@
         (foreign-free dptr))))
   (:method (dptr dsize (as (eql :string)))
     (nth-value 0 (foreign-string-to-lisp dptr :count dsize)))
+  (:method (dptr dsize (as (eql :int)))
+    (assert (eql dsize (foreign-type-size :int64)))
+    (mem-ref dptr :int64))
   (:method (dptr dsize (as vector-decoder))
     (let* ((foreign-element-type (foreign-element-type-of as))
            (vector-element-type (vector-element-type-of as))
