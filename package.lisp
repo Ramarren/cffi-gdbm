@@ -4,4 +4,13 @@
   (:export #:*gdbm*
            #:db-open
            #:db-close
-           #:with-gdbm))
+           #:with-gdbm
+           #:store
+           #:store
+           #:exists
+           #:fetch
+           #:db-delete
+           #:make-key-iterator
+           #:sync
+           #:reorganize
+           #:get-error-string))
