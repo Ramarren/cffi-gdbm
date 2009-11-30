@@ -27,8 +27,8 @@
 (defgeneric decode-datum (dptr dsize as)
   (:method :around (dptr dsize as)
     (unless (null-pointer-p dptr)
-      (prog1
-          (call-next-method)
+      (unwind-protect
+           (call-next-method)
         (foreign-free dptr))))
   (:method (dptr dsize (as (eql :string)))
     (nth-value 0 (foreign-string-to-lisp dptr :count dsize)))
