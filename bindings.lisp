@@ -3,51 +3,15 @@
 ;;; library
 
 (define-foreign-library gdbm
-  (:unix "/home/ramarren/C/gdbm/gdbm-1.8.3/.libs/libgdbm.so"))
+  (:unix "libgdbm.so"))
 
 (load-foreign-library 'gdbm)
 
 ;;; types
 
-(defstruct datum
-  dptr
-  (dsize 0 :type (unsigned-byte 32)))
-
-(define-foreign-type gdbm-datum ()
-  ()
-  (:actual-type :uint64)
-  (:simple-parser gdbm-datum))
-
-(define-parse-method gdbm-datum ()
-  (make-instance 'gdbm-datum))
-
-;; (defmethod translate-to-foreign ((value datum) (type gdbm-datum))
-;;   (let ((data (logior (ash (datum-dsize value)  32)
-;;                       (pointer-address (datum-dptr value)))))
-;;     (format t "~16,'0x" data)
-;;     data))
-
 (defcstruct foreign-datum
   (dptr :pointer)
   (dsize :int))
-
-(defmethod translate-to-foreign ((value datum) (type gdbm-datum))
-  (with-foreign-object (fdatum 'foreign-datum)
-    (setf (foreign-slot-value fdatum 'foreign-datum 'dptr) (datum-dptr value)
-          (foreign-slot-value fdatum 'foreign-datum 'dsize) (datum-dsize value))
-    (mem-ref fdatum :uint64)))
-
-;; (defmethod translate-from-foreign (value (type gdbm-datum))
-;;   (let ((dptr (ldb (byte 32 32) value)))
-;;     (unless (zerop dptr)
-;;       (make-datum :dptr (make-pointer dptr)
-;;                   :dsize (ldb (byte 32 0) value)))))
-
-(defmethod translate-from-foreign (value (type gdbm-datum))
-  (with-foreign-object (fdatum 'foreign-datum)
-    (setf (mem-ref fdatum :uint64) value)
-    (make-datum :dptr (foreign-slot-value fdatum 'foreign-datum 'dptr)
-                :dsize (foreign-slot-value fdatum 'foreign-datum 'dsize))))
 
 (defctype gdbm-file :pointer)
 
@@ -104,6 +68,7 @@
 
 (defcvar (gdbm-version "gdbm_version") :string)
 (defcvar (gdbm-errno "gdbm_errno") gdbm-error-code)
+(defcvar (gdbm-errno-raw "gdbm_errno") :int)
 
 ;;; functions
 
@@ -119,28 +84,37 @@
 
 (defcfun (%gdbm-store "gdbm_store") :int
   (dbf gdbm-file)
-  (key gdbm-datum)
-  (content gdbm-datum)
+  (key-dptr :pointer)
+  (key-dsize :int)
+  (content-dptr :pointer)
+  (content-dsize :int)
   (flag gdbm-store-flag))
 
-(defcfun (%gdbm-fetch "gdbm_fetch") :uint64
+(defcfun (%gdbm-fetch "gdbm_fetch") :void
+  (retval :pointer)
   (dbf gdbm-file)
-  (key gdbm-datum))
+  (key-dptr :pointer)
+  (key-dsize :int))
 
 (defcfun (%gdbm-exists "gdbm_exists") :int
   (dbf gdbm-file)
-  (key gdbm-datum))
+  (key-dptr :pointer)
+  (key-dsize :int))
 
 (defcfun (%gdbm-delete "gdbm_delete") :int
   (dbf gdbm-file)
-  (key gdbm-datum))
+  (key-dptr :pointer)
+  (key-dsize :int))
 
-(defcfun (%gdbm-firstkey "gdbm_firstkey") gdbm-datum
+(defcfun (%gdbm-firstkey "gdbm_firstkey") :void
+  (retval :pointer)
   (dbf gdbm-file))
 
-(defcfun (%gdbm-nextkey "gdbm_nextkey") gdbm-datum
+(defcfun (%gdbm-nextkey "gdbm_nextkey") :void
+  (retval :pointer)
   (dbf gdbm-file)
-  (key gdbm-datum))
+  (key-dptr :pointer)
+  (key-dsize :int))
 
 (defcfun (%gdbm-reorganize "gdbm_reorganize") :int
   (dbf gdbm-file))
@@ -161,10 +135,6 @@
   (dbf gdbm-file))
 
 ;;; aux
-
-(defcstruct foreign-datum
-  (dptr :pointer)
-  (dsize :int))
 
 (defun foreign-datum-layout ()
   (with-foreign-object (fdatum 'foreign-datum)

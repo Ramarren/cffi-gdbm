@@ -7,4 +7,5 @@
   :depends-on (:cffi :alexandria :babel)
   :components ((:file "package")
                (:file "bindings" :depends-on ("package"))
-               (:file "datum" :depends-on ("package" "bindings"))))
+               (:file "datum" :depends-on ("package" "bindings"))
+               (:file "interface" :depends-on ("package" "bindings" "datum"))))
