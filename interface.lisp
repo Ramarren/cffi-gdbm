@@ -2,14 +2,20 @@
 
 (defparameter *gdbm* nil)
 
-(defun db-open (file &key (block-size 0) (flags :wrcreat) (mode '(:irusr :iwusr)) (fatal-callback nil))
-  (%gdbm-open (namestring file)
-              block-size
-              flags
-              mode
-              (if fatal-callback
-                  (get-callback fatal-callback)
-                  (null-pointer))))
+(defun db-open (file &key (block-size 0) (flags :wrcreat) (mode '(:irusr :iwusr)) (fatal-callback nil) (on-fail :error))
+  (let ((retval
+         (%gdbm-open (namestring file)
+                     block-size
+                     flags
+                     mode
+                     (if fatal-callback
+                         (get-callback fatal-callback)
+                         (null-pointer)))))
+    (if (null-pointer-p retval)
+        (if (eql on-fail :error)
+            (error "Cannot open database ~a, error: ~a" file (get-error-string))
+            nil)
+        retval)))
 
 (defun db-close (&optional (gdbm *gdbm*))
   (%gdbm-close gdbm))
